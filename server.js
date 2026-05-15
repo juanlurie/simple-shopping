@@ -228,6 +228,12 @@ wss.on('connection', (ws) => {
           broadcast({ type: 'update', lists, currentListKey, itemFrequency, knownItems: getAllKnownItems() });
           break;
 
+        case 'clear_all':
+          lists[currentListKey].items = [];
+          saveData();
+          broadcast({ type: 'update', lists, currentListKey, itemFrequency, knownItems: getAllKnownItems() });
+          break;
+
         case 'uncheck_all':
           lists[currentListKey].items.forEach(i => i.checked = false);
           saveData();

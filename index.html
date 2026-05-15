@@ -84,7 +84,17 @@
     color: var(--clr);
     margin-bottom: 8px;
     padding-left: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
+  .group-label .del-group {
+    opacity: 0.4;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+  }
+  .group-label .del-group:hover { opacity: 1; }
   .grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -130,15 +140,17 @@
   }
   .tile .del {
     position: absolute;
-    top: 3px;
-    right: 4px;
-    opacity: 0;
-    color: #444;
-    font-size: 0.6rem;
-    padding: 2px 3px;
+    top: 2px;
+    right: 3px;
+    color: #666;
+    font-size: 0.65rem;
+    padding: 3px 5px;
     cursor: pointer;
+    background: #1a1a22;
+    border-radius: 4px;
+    opacity: 0.6;
   }
-  .tile:hover .del { opacity: 1; }
+  .tile .del:hover { opacity: 1; }
   .build-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -318,6 +330,7 @@
     <button class="sheet-btn primary" onclick="duplicateList()">+ Duplicate current</button>
     <button class="sheet-btn primary" onclick="uncheckAll()">↩ Uncheck all</button>
     <button class="sheet-btn danger" onclick="clearChecked()">Clear checked</button>
+    <button class="sheet-btn danger" onclick="clearList()">Clear entire list</button>
   </div>
 </div>
 
@@ -352,7 +365,6 @@ let lists = {}, curKey = 'default', ws = null;
 let itemFrequency = {}, knownItems = [];
 let mode = 'list';
 let buildQuantities = {};
-let buildSearch = '';
 
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -380,22 +392,25 @@ function setMode(m) {
   mode = m;
   document.getElementById('modeListBtn').className = m === 'list' ? 'active' : '';
   document.getElementById('modeBuildBtn').className = m === 'build' ? 'active' : '';
+  const inp = document.getElementById('addInput');
+  const btn = document.getElementById('addBtn');
   if (m === 'build') {
-    document.getElementById('addInput').placeholder = 'Search items...';
-    document.getElementById('addBtn').textContent = 'Done';
-    document.getElementById('addBtn').className = 'commit';
-    document.getElementById('addBtn').onclick = buildCommit;
+    inp.placeholder = 'Search or add new item...';
+    btn.textContent = 'Done';
+    btn.className = 'commit';
+    btn.onclick = buildCommit;
     buildQuantities = {};
     const curItems = cur().items;
     for (const item of curItems) {
       buildQuantities[item.name.toLowerCase()] = item.qty || 1;
     }
   } else {
-    document.getElementById('addInput').placeholder = 'Add item...';
-    document.getElementById('addBtn').textContent = 'Add';
-    document.getElementById('addBtn').className = '';
-    document.getElementById('addBtn').onclick = addItem;
+    inp.placeholder = 'Add item...';
+    btn.textContent = 'Add';
+    btn.className = '';
+    btn.onclick = addItem;
   }
+  inp.value = '';
   render();
 }
 
@@ -436,7 +451,7 @@ function renderList() {
   let h = '';
   for (const g of order) {
     h += '<div class="group' + (g.allDone ? ' done-group' : '') + '" style="--clr:' + g.cat.clr + '">';
-    h += '<div class="group-label">' + g.cat.label + '</div>';
+    h += '<div class="group-label"><span>' + g.cat.label + '</span><span class="del-group" onclick="delGroup(\'' + g.key + '\')">Clear</span></div>';
     h += '<div class="grid">';
     for (let i = 0; i < g.items.length; i++) {
       const item = g.items[i];
@@ -458,10 +473,16 @@ function renderList() {
 
 function renderBuild() {
   const el = document.getElementById('content');
-  const curItems = cur().items;
-  const curNames = new Set(curItems.map(i => i.name.toLowerCase()));
+  const inp = document.getElementById('addInput');
+  const search = inp.value.trim().toLowerCase();
 
-  let items = knownItems.filter(i => !buildSearch || i.name.toLowerCase().includes(buildSearch.toLowerCase()));
+  let items = knownItems.filter(i => !search || i.name.toLowerCase().includes(search));
+
+  if (items.length === 0 && search) {
+    el.innerHTML = '<div class="build-grid"><div class="build-card" onclick="buildAddNew()"><span class="card-text" style="color:#00ff88">+ Add "' + esc(inp.value.trim()) + '"</span></div></div>';
+    document.getElementById('progress').textContent = 'Type to search';
+    return;
+  }
 
   if (items.length === 0) {
     el.innerHTML = '<div class="empty">No items found</div>';
@@ -499,6 +520,18 @@ function buildRemove(key) {
   renderBuild();
 }
 
+function buildAddNew() {
+  const inp = document.getElementById('addInput');
+  const name = inp.value.trim();
+  if (!name) return;
+  const key = name.toLowerCase();
+  const cat = catFor(name);
+  buildQuantities[key] = (buildQuantities[key] || 0) + 1;
+  knownItems.unshift({ name: name, category: cat, freq: 0 });
+  inp.value = '';
+  renderBuild();
+}
+
 function buildCommit() {
   const list = cur();
   const curNames = new Set(list.items.map(i => i.name.toLowerCase()));
@@ -514,8 +547,6 @@ function buildCommit() {
     }
   }
   buildQuantities = {};
-  buildSearch = '';
-  document.getElementById('addInput').value = '';
   setMode('list');
 }
 
@@ -532,9 +563,20 @@ function addItem() {
 
 function toggle(i) { send({ type: 'toggle_item', index: i }); }
 function del(i) { send({ type: 'delete_item', index: i }); }
+function delGroup(cat) {
+  const list = cur();
+  const toRemove = [];
+  for (let i = 0; i < list.items.length; i++) {
+    if ((list.items[i].category || catFor(list.items[i].name)) === cat) toRemove.push(i);
+  }
+  for (let i = toRemove.length - 1; i >= 0; i--) {
+    send({ type: 'delete_item', index: toRemove[i] });
+  }
+}
 function clearChecked() { send({ type: 'clear_checked' }); closeSheetDirect(); }
 function uncheckAll() { send({ type: 'uncheck_all' }); closeSheetDirect(); }
 function duplicateList() { send({ type: 'duplicate_list' }); closeSheetDirect(); }
+function clearList() { if (confirm('Clear all items from this list?')) { send({ type: 'clear_all' }); closeSheetDirect(); } }
 
 function openSheet() {
   const lp = document.getElementById('listPicker');
@@ -563,17 +605,17 @@ const addInput = document.getElementById('addInput');
 addInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     if (mode === 'build') {
-      buildSearch = addInput.value.trim();
-      renderBuild();
+      const search = addInput.value.trim().toLowerCase();
+      const match = knownItems.find(i => i.name.toLowerCase() === search);
+      if (match) {
+        buildTap(match.name.toLowerCase());
+        addInput.value = '';
+      } else if (search) {
+        buildAddNew();
+      }
     } else {
       addItem();
     }
-  }
-});
-addInput.addEventListener('input', () => {
-  if (mode === 'build') {
-    buildSearch = addInput.value.trim();
-    renderBuild();
   }
 });
 
