@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# simple-shopping
-=======
 # Simple Shopping List
 
 A family-friendly shopping list app with real-time sync across devices.
@@ -13,6 +10,12 @@ A family-friendly shopping list app with real-time sync across devices.
 - **Multiple lists** — duplicate, switch, and manage lists from the bottom sheet
 - **PWA** — install on your phone for a native-like experience
 - **Dark theme** — minimalist design with subtle neon accents
+
+## Screenshots
+
+![List mode](assets/shopping-1.png)
+
+![Build mode](assets/shopping-2.png)
 
 ## Quick Start
 
@@ -35,4 +38,3 @@ node server.js
 - WebSocket (ws) for real-time sync
 - Single-page frontend, no build step
 - Data persisted to `./data/data.json`
->>>>>>> 5a74fdf (Initial commit: family shopping list with real-time sync and PWA)
