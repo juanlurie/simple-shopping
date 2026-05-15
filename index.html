@@ -404,28 +404,35 @@ function cur() { return lists[curKey] || { name: 'Unknown', items: [] }; }
 
 function setMode(m) {
   mode = m;
-  document.getElementById('modeListBtn').className = m === 'list' ? 'active' : '';
-  document.getElementById('modeBuildBtn').className = m === 'build' ? 'active' : '';
-  const inp = document.getElementById('addInput');
-  const actionBtn = document.getElementById('actionBtn');
+  const modeListBtn = document.getElementById('modeListBtn');
+  const modeBuildBtn = document.getElementById('modeBuildBtn');
   const cancelBtn = document.getElementById('cancelBtn');
+  const actionBtn = document.getElementById('actionBtn');
+  const inp = document.getElementById('addInput');
+
   if (m === 'build') {
-    inp.placeholder = 'Search or add new item...';
+    modeListBtn.style.display = 'none';
+    modeBuildBtn.style.display = 'none';
+    cancelBtn.style.display = '';
     actionBtn.textContent = 'Done';
     actionBtn.className = 'commit';
     actionBtn.onclick = buildCommit;
-    cancelBtn.style.display = '';
+    inp.placeholder = 'Search or add new item...';
     buildQuantities = {};
     const curItems = cur().items;
     for (const item of curItems) {
       buildQuantities[item.name.toLowerCase()] = item.qty || 1;
     }
   } else {
-    inp.placeholder = 'Add item...';
+    modeListBtn.style.display = '';
+    modeBuildBtn.style.display = '';
+    modeListBtn.className = 'active';
+    modeBuildBtn.className = '';
+    cancelBtn.style.display = 'none';
     actionBtn.textContent = 'Add';
     actionBtn.className = '';
     actionBtn.onclick = addItem;
-    cancelBtn.style.display = 'none';
+    inp.placeholder = 'Add item...';
   }
   inp.value = '';
   render();
