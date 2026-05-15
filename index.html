@@ -325,7 +325,7 @@
 <div class="top-bar">
   <input type="text" id="addInput" placeholder="Add item..." autocomplete="off">
   <button id="actionBtn" onclick="doAction()">Add</button>
-  <button id="cancelBtn" style="display:none" onclick="setMode('list')">Cancel</button>
+  <button id="cancelBtn" style="display:none" onclick="cancelBuild()">Cancel</button>
   <button id="modeListBtn" class="active" onclick="setMode('list')">List</button>
   <button id="modeBuildBtn" onclick="setMode('build')">Build</button>
 </div>
@@ -574,6 +574,12 @@ function buildCommit() {
 }
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function cancelBuild() {
+  const total = Object.values(buildQuantities).reduce((s, q) => s + q, 0);
+  if (total > 0 && !confirm('Discard ' + total + ' selected item' + (total > 1 ? 's' : '') + '?')) return;
+  setMode('list');
+}
 
 function doAction() {
   if (mode === 'build') buildCommit();
